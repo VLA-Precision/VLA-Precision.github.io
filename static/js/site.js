@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const hydrateVideo = (video) => {
+    const source = video.querySelector("source[data-src]");
+    if (!source) return;
+    source.src = source.dataset.src;
+    source.removeAttribute("data-src");
+    video.load();
+  };
+
   const carousel = document.querySelector(".carousel");
 
   if (carousel) {
@@ -36,6 +44,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const physicalIndex = () => Math.round(viewport.scrollLeft / slideStep());
     const logicalIndex = (index) => ((index - cloneCount) % slides.length + slides.length) % slides.length;
 
+    let targetIndex = cloneCount;
+    let queuedOffset = 0;
+    let isNavigating = false;
+    let scrollTimer;
+
     const setPosition = (index, instant = false) => {
       if (instant) viewport.classList.add("carousel__viewport--resetting");
       viewport.scrollTo({ left: index * slideStep(), behavior: instant ? "auto" : "smooth" });
@@ -44,9 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    const updateStatus = () => {
+    const updateStatus = (index = physicalIndex()) => {
       const count = visibleCount();
-      const start = logicalIndex(physicalIndex());
+      const start = logicalIndex(index);
       const labels = Array.from({ length: count }, (_, offset) => ((start + offset) % slides.length) + 1);
       const sequential = labels.every((label, index) => index === 0 || label === labels[index - 1] + 1);
       status.textContent = sequential
@@ -54,22 +67,81 @@ document.addEventListener("DOMContentLoaded", () => {
         : `Tasks ${labels.join(", ")} of ${slides.length}`;
     };
 
+    const prepareWindow = (index) => {
+      const count = visibleCount();
+      for (let offset = 0; offset < count; offset += 1) {
+        const video = renderedSlides[index + offset]?.querySelector("video");
+        if (!video) continue;
+        video.preload = "auto";
+        hydrateVideo(video);
+      }
+    };
+
+    const syncWindowPlayback = (fromIndex, toIndex) => {
+      const count = visibleCount();
+      for (let offset = 0; offset < count; offset += 1) {
+        const sourceVideo = renderedSlides[fromIndex + offset]?.querySelector("video");
+        const destinationVideo = renderedSlides[toIndex + offset]?.querySelector("video");
+        if (!sourceVideo || !destinationVideo) continue;
+
+        destinationVideo.preload = "auto";
+        hydrateVideo(destinationVideo);
+        const sync = () => {
+          if (Number.isFinite(sourceVideo.currentTime)) {
+            try {
+              destinationVideo.currentTime = sourceVideo.currentTime;
+            } catch (_) {
+              // The destination may still be waiting for seekable media data.
+            }
+          }
+          if (!sourceVideo.paused) destinationVideo.play().catch(() => {});
+        };
+
+        if (destinationVideo.readyState >= 1) sync();
+        else destinationVideo.addEventListener("loadedmetadata", sync, { once: true });
+      }
+    };
+
     const normalizeLoop = () => {
       const index = physicalIndex();
-      if (index >= cloneCount + slides.length) {
-        setPosition(index - slides.length, true);
-      } else if (index < cloneCount) {
-        setPosition(index + slides.length, true);
+      let normalizedIndex = index;
+      if (index >= cloneCount + slides.length) normalizedIndex -= slides.length;
+      else if (index < cloneCount) normalizedIndex += slides.length;
+
+      if (normalizedIndex !== index) {
+        syncWindowPlayback(index, normalizedIndex);
+        setPosition(normalizedIndex, true);
       }
-      updateStatus();
+      targetIndex = normalizedIndex;
+      prepareWindow(targetIndex);
+      updateStatus(targetIndex);
+    };
+
+    const finishNavigation = () => {
+      window.clearTimeout(scrollTimer);
+      normalizeLoop();
+      isNavigating = false;
+
+      if (queuedOffset !== 0) {
+        const nextOffset = Math.sign(queuedOffset);
+        queuedOffset -= nextOffset;
+        window.requestAnimationFrame(() => goBy(nextOffset));
+      }
     };
 
     const goBy = (offset) => {
-      let index = physicalIndex();
-      if (index >= cloneCount + slides.length) index -= slides.length;
-      if (index < cloneCount) index += slides.length;
-      setPosition(index + offset);
-      window.setTimeout(updateStatus, 260);
+      if (isNavigating) {
+        queuedOffset += offset;
+        return;
+      }
+
+      normalizeLoop();
+      targetIndex += offset;
+      prepareWindow(targetIndex);
+      isNavigating = true;
+      setPosition(targetIndex);
+      updateStatus(targetIndex);
+      scrollTimer = window.setTimeout(finishNavigation, 800);
     };
 
     previous.addEventListener("click", () => goBy(-1));
@@ -86,23 +158,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    let scrollTimer;
     viewport.addEventListener("scroll", () => {
       window.clearTimeout(scrollTimer);
-      updateStatus();
-      scrollTimer = window.setTimeout(normalizeLoop, 150);
+      if (!isNavigating) updateStatus();
+      scrollTimer = window.setTimeout(finishNavigation, 180);
     }, { passive: true });
 
     window.addEventListener("resize", () => {
       window.clearTimeout(scrollTimer);
       scrollTimer = window.setTimeout(() => {
-        setPosition(cloneCount, true);
-        updateStatus();
+        const currentLogicalIndex = logicalIndex(targetIndex);
+        targetIndex = cloneCount + currentLogicalIndex;
+        setPosition(targetIndex, true);
+        prepareWindow(targetIndex);
+        updateStatus(targetIndex);
       }, 120);
     });
 
-    setPosition(cloneCount, true);
-    updateStatus();
+    setPosition(targetIndex, true);
+    prepareWindow(targetIndex);
+    updateStatus(targetIndex);
   }
 
   document.querySelectorAll(".figure-carousel").forEach((figureCarousel) => {
@@ -177,14 +252,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const videos = [...document.querySelectorAll("video")];
-
-  const hydrateVideo = (video) => {
-    const source = video.querySelector("source[data-src]");
-    if (!source) return;
-    source.src = source.dataset.src;
-    source.removeAttribute("data-src");
-    video.load();
-  };
 
   if ("IntersectionObserver" in window) {
     const videoObserver = new IntersectionObserver((entries) => {
