@@ -177,33 +177,146 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const videos = [...document.querySelectorAll("video")];
+  const visibleVideos = new Set();
+  const nearbyVideos = new Set();
+  let nativeFullscreenVideo = null;
 
   const hydrateVideo = (video) => {
     const source = video.querySelector("source[data-src]");
     if (!source) return;
+    video.preload = "auto";
     source.src = source.dataset.src;
     source.removeAttribute("data-src");
     video.load();
   };
 
+  const fullscreenVideo = () => {
+    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!fullscreenElement) return nativeFullscreenVideo;
+    if (fullscreenElement.matches?.("video")) return fullscreenElement;
+    return fullscreenElement.querySelector?.("video") || null;
+  };
+
+  const playVideo = (video) => {
+    hydrateVideo(video);
+    video.play().catch(() => {});
+  };
+
+  const syncVideoPlayback = () => {
+    const activeFullscreenVideo = fullscreenVideo();
+
+    videos.forEach((video) => {
+      const shouldPlay = !document.hidden && (
+        activeFullscreenVideo
+          ? video === activeFullscreenVideo
+          : visibleVideos.has(video)
+      );
+
+      if (shouldPlay) {
+        playVideo(video);
+      } else {
+        video.pause();
+      }
+    });
+  };
+
+  const distanceFromViewport = (video) => {
+    const bounds = video.getBoundingClientRect();
+    if (bounds.bottom < 0) return -bounds.bottom;
+    if (bounds.top > window.innerHeight) return bounds.top - window.innerHeight;
+    return 0;
+  };
+
+  const preloadNearestVideoGroup = () => {
+    if (document.hidden || fullscreenVideo()) return;
+
+    const visibleAreReady = [...visibleVideos].every(
+      (video) => video.error || video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+    );
+    if (visibleVideos.size > 0 && !visibleAreReady) return;
+
+    const candidates = [...nearbyVideos]
+      .filter((video) => !visibleVideos.has(video) && video.querySelector("source[data-src]"))
+      .sort((first, second) => distanceFromViewport(first) - distanceFromViewport(second));
+
+    if (!candidates.length) return;
+
+    const nearestDistance = distanceFromViewport(candidates[0]);
+    candidates
+      .filter((video) => distanceFromViewport(video) <= nearestDistance + 48)
+      .slice(0, 3)
+      .forEach(hydrateVideo);
+  };
+
+  const scheduleNearbyPreload = () => {
+    window.requestAnimationFrame(preloadNearestVideoGroup);
+  };
+
+  videos.forEach((video) => {
+    video.addEventListener("canplay", scheduleNearbyPreload);
+    video.addEventListener("error", scheduleNearbyPreload);
+    video.addEventListener("webkitbeginfullscreen", () => {
+      nativeFullscreenVideo = video;
+      syncVideoPlayback();
+    });
+    video.addEventListener("webkitendfullscreen", () => {
+      nativeFullscreenVideo = null;
+      syncVideoPlayback();
+    });
+  });
+
   if ("IntersectionObserver" in window) {
-    const videoObserver = new IntersectionObserver((entries) => {
+    const playbackObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         const video = entry.target;
         if (entry.isIntersecting) {
-          hydrateVideo(video);
-          video.play().catch(() => {});
+          visibleVideos.add(video);
         } else {
-          video.pause();
+          visibleVideos.delete(video);
         }
       });
-    }, { rootMargin: "220px 80px", threshold: 0.15 });
+      syncVideoPlayback();
+      scheduleNearbyPreload();
+    }, { rootMargin: "0px", threshold: 0.01 });
 
-    videos.forEach((video) => videoObserver.observe(video));
-  } else {
+    const preloadObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          nearbyVideos.add(entry.target);
+        } else {
+          nearbyVideos.delete(entry.target);
+        }
+      });
+      scheduleNearbyPreload();
+    }, { rootMargin: "700px 0px", threshold: 0.01 });
+
     videos.forEach((video) => {
-      hydrateVideo(video);
-      video.play().catch(() => {});
+      playbackObserver.observe(video);
+      preloadObserver.observe(video);
     });
+  } else {
+    const updateVisibleVideos = () => {
+      videos.forEach((video) => {
+        const bounds = video.getBoundingClientRect();
+        const isVisible = bounds.bottom > 0
+          && bounds.top < window.innerHeight
+          && bounds.right > 0
+          && bounds.left < window.innerWidth;
+        if (isVisible) {
+          visibleVideos.add(video);
+        } else {
+          visibleVideos.delete(video);
+        }
+      });
+      syncVideoPlayback();
+    };
+
+    window.addEventListener("scroll", updateVisibleVideos, { passive: true });
+    window.addEventListener("resize", updateVisibleVideos);
+    updateVisibleVideos();
   }
+
+  document.addEventListener("fullscreenchange", syncVideoPlayback);
+  document.addEventListener("webkitfullscreenchange", syncVideoPlayback);
+  document.addEventListener("visibilitychange", syncVideoPlayback);
 });
