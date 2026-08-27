@@ -190,6 +190,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const isAdaptive = figureCarousel.classList.contains("figure-carousel--adaptive");
     let activeIndex = 0;
 
+    const prepareFigureImage = (image, priority) => {
+      image.loading = "eager";
+      image.fetchPriority = priority;
+      if (typeof image.decode === "function") image.decode().catch(() => {});
+    };
+
+    const prepareFigureImages = () => {
+      slides.forEach((slide, index) => {
+        const image = slide.querySelector("img");
+        prepareFigureImage(image, index === activeIndex ? "high" : "low");
+      });
+    };
+
     const syncFigureHeight = () => {
       if (!isAdaptive) return;
       window.requestAnimationFrame(() => {
@@ -213,6 +226,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const goToFigure = (index, behavior = "smooth") => {
       const targetIndex = Math.max(0, Math.min(index, slides.length - 1));
+      const targetImage = slides[targetIndex].querySelector("img");
+      prepareFigureImage(targetImage, "high");
       viewport.scrollTo({ left: targetIndex * viewport.clientWidth, behavior });
       updateFigureCarousel(targetIndex);
     };
@@ -245,6 +260,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const image = slide.querySelector("img");
         if (!image.complete) image.addEventListener("load", syncFigureHeight, { once: true });
       });
+    }
+
+    if ("IntersectionObserver" in window) {
+      const imageObserver = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        prepareFigureImages();
+        imageObserver.disconnect();
+      }, { rootMargin: "1000px 0px", threshold: 0.01 });
+      imageObserver.observe(figureCarousel);
+    } else {
+      prepareFigureImages();
     }
 
     window.addEventListener("resize", () => goToFigure(activeIndex, "auto"));

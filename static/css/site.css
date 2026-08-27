@@ -583,6 +583,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 
 .figure-carousel--adaptive .figure-carousel__slide img { height: auto; }
 
+.figure-carousel__slide--compact img {
+  width: 75%;
+  margin-inline: auto;
+}
+
 .figure-carousel__slide figcaption {
   max-width: 1040px;
   min-height: 48px;
