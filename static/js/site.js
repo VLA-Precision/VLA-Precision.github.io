@@ -177,117 +177,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const videos = [...document.querySelectorAll("video")];
-  const webVideoDirectory = "media/videos/web_720_balanced/";
-  const originalVideoDirectory = "media/videos/real_world/";
-  const sourceStates = new WeakMap();
-
-  const captureCurrentFrame = (video) => {
-    if (!video.videoWidth || !video.videoHeight) return "";
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-    if (!context) return "";
-
-    try {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.9);
-    } catch {
-      return "";
-    }
-  };
-
-  const switchVideoSource = (video, targetVariant) => {
-    const state = sourceStates.get(video);
-    if (!state || state.targetVariant === targetVariant) return;
-
-    const targetSource = targetVariant === "original" ? state.originalSource : state.previewSource;
-    if (!targetSource) return;
-
-    const token = ++state.token;
-    const wasSettled = state.currentVariant === state.targetVariant;
-    if (wasSettled) {
-      state.resumeTime = Number.isFinite(video.currentTime) ? video.currentTime : state.resumeTime;
-      state.resumePlayback = !video.paused;
-    }
-    state.targetVariant = targetVariant;
-
-    const heldFrame = captureCurrentFrame(video);
-    if (heldFrame) video.poster = heldFrame;
-    video.pause();
-
-    const finishSwitch = () => {
-      if (state.token !== token) return;
-      state.currentVariant = targetVariant;
-      state.targetVariant = targetVariant;
-      const revealFrame = () => window.requestAnimationFrame(() => video.removeAttribute("poster"));
-      if (state.resumePlayback) {
-        video.addEventListener("playing", revealFrame, { once: true });
-        video.play().catch(revealFrame);
-      } else {
-        revealFrame();
-      }
-    };
-
-    video.addEventListener("error", () => {
-      if (state.token !== token) return;
-      state.currentVariant = targetVariant;
-      state.targetVariant = targetVariant;
-      video.removeAttribute("poster");
-    }, { once: true });
-
-    video.addEventListener("loadedmetadata", () => {
-      if (state.token !== token) return;
-      const duration = Number.isFinite(video.duration) ? video.duration : state.resumeTime;
-      const safeTime = Math.min(state.resumeTime, Math.max(0, duration - 0.05));
-
-      if (safeTime < 0.05) {
-        if (video.readyState >= 2) finishSwitch();
-        else video.addEventListener("loadeddata", finishSwitch, { once: true });
-        return;
-      }
-
-      video.addEventListener("seeked", finishSwitch, { once: true });
-      video.currentTime = safeTime;
-    }, { once: true });
-
-    video.src = targetSource;
-    video.load();
-  };
-
-  const handleNativeFullscreen = () => {
-    const activeVideo = document.fullscreenElement || document.webkitFullscreenElement;
-    videos.forEach((video) => {
-      if (!video.controls) return;
-      switchVideoSource(video, activeVideo === video ? "original" : "preview");
-    });
-  };
-
-  document.addEventListener("fullscreenchange", handleNativeFullscreen);
-  document.addEventListener("webkitfullscreenchange", handleNativeFullscreen);
-
-  videos.forEach((video) => {
-    if (!video.controls) return;
-    video.addEventListener("webkitbeginfullscreen", () => switchVideoSource(video, "original"));
-    video.addEventListener("webkitendfullscreen", () => switchVideoSource(video, "preview"));
-  });
 
   const hydrateVideo = (video) => {
     const source = video.querySelector("source[data-src]");
     if (!source) return;
-    const videoName = source.dataset.src.split("/").pop();
-    const previewSource = `${webVideoDirectory}${videoName}`;
-    const originalSource = `${originalVideoDirectory}${videoName}`;
-    sourceStates.set(video, {
-      currentVariant: "preview",
-      targetVariant: "preview",
-      previewSource,
-      originalSource,
-      resumeTime: 0,
-      resumePlayback: false,
-      token: 0
-    });
-    source.src = previewSource;
+    source.src = source.dataset.src;
     source.removeAttribute("data-src");
     video.load();
   };
