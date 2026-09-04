@@ -72,7 +72,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero__inner {
-  padding-block: 76px 66px;
+  padding-block: 76px 30px;
   text-align: center;
 }
 
@@ -96,18 +96,109 @@ button, a { -webkit-tap-highlight-color: transparent; }
   -webkit-text-fill-color: transparent;
 }
 
-.authors {
-  margin: 20px 0 0;
-  color: var(--muted);
-  font-size: 1.05rem;
+.author-block {
+  max-width: 1100px;
+  margin: 26px auto 0;
 }
+
+.authors {
+  max-width: 960px;
+  margin-inline: auto;
+  color: #209cee;
+  font-size: 1.2rem;
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+.author-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.38em;
+  margin: 0;
+}
+
+.author {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.author-block sup {
+  position: relative;
+  top: -0.18em;
+  font-size: 0.64em;
+  font-weight: 400;
+  line-height: 0;
+}
+
+.authors sup { color: inherit; }
+
+.affiliations {
+  margin-top: 12px;
+  color: #50505b;
+  font-size: 1.07rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.affiliations p { margin: 0; }
+
+.affiliations sup {
+  color: inherit;
+  font-size: 0.68em;
+}
+
+.affiliation-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 20px;
+}
+
+.affiliation-row span {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.institution-logos {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  margin: 26px auto 0;
+}
+
+.institution-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.institution-logo-row--primary { gap: 32px; }
+
+.institution-logo-row--secondary { gap: 24px; }
+
+.institution-logo {
+  display: block;
+  height: auto;
+  mix-blend-mode: multiply;
+}
+
+.institution-logo--ustc { width: 300px; }
+
+.institution-logo--chem-lab { width: 180px; }
+
+.institution-logo--beihang { width: 280px; }
+
+.institution-logo--zgca { width: 230px; }
+
+.institution-logo--spinx { width: 260px; }
 
 .hero__links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
-  margin-top: 28px;
+  margin-top: 26px;
 }
 
 .button {
@@ -119,7 +210,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 0 20px;
   border: 1px solid #363636;
   border-radius: 999px;
-  font-size: 1.02rem;
+  font-size: 1.1rem;
   font-weight: 400;
   text-decoration: none;
   transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
@@ -241,7 +332,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin: 0 auto 24px;
+  margin: 0 auto 34px;
   padding: 11px 18px;
   color: #33313a;
   background:
@@ -744,6 +835,49 @@ video:-webkit-full-screen {
   .hero__inner { padding-block: 54px 48px; }
 
   .hero h1 { font-size: clamp(2rem, 10vw, 2.8rem); }
+
+  .author-block { margin-top: 24px; }
+
+  .authors {
+    font-size: 1.06rem;
+    line-height: 1.7;
+  }
+
+  .affiliations {
+    margin-top: 11px;
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .affiliation-row {
+    align-items: center;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .institution-logos {
+    gap: 14px;
+    margin-top: 22px;
+  }
+
+  .institution-logo-row {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .institution-logo-row--primary { gap: 14px; }
+
+  .institution-logo-row--secondary { gap: 14px 12px; }
+
+  .institution-logo--ustc { width: min(66%, 250px); }
+
+  .institution-logo--chem-lab { width: min(42%, 160px); }
+
+  .institution-logo--beihang { width: min(58%, 215px); }
+
+  .institution-logo--zgca { width: min(40%, 150px); }
+
+  .institution-logo--spinx { width: min(48%, 180px); }
 
   .showcase,
   .video-section,
