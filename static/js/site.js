@@ -277,6 +277,28 @@ document.addEventListener("DOMContentLoaded", () => {
     updateFigureCarousel(0);
   });
 
+  const copyButton = document.querySelector(".citation-copy");
+  const citation = document.querySelector(".citation-code code");
+  if (copyButton && citation && navigator.clipboard?.writeText) {
+    copyButton.hidden = false;
+    let copyResetTimer;
+    copyButton.addEventListener("click", async () => {
+      clearTimeout(copyResetTimer);
+      try {
+        await navigator.clipboard.writeText(citation.textContent);
+        copyButton.textContent = "Copied!";
+      } catch {
+        copyButton.textContent = "Select text to copy";
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(citation);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      copyResetTimer = setTimeout(() => { copyButton.textContent = "Copy"; }, 2500);
+    });
+  }
+
   const videos = [...document.querySelectorAll("video")];
 
   if ("IntersectionObserver" in window) {

@@ -776,6 +776,76 @@ button, a { -webkit-tap-highlight-color: transparent; }
   white-space: nowrap;
 }
 
+.citation-box {
+  position: relative;
+  width: 85%;
+  margin: 0 auto;
+}
+
+.citation-toolbar {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.citation-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid #e2e2e7;
+  border-radius: 5px;
+  background: #fafafb;
+  color: #73737d;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.citation-copy[hidden] { display: none; }
+
+.citation-copy::before {
+  width: 8px;
+  height: 10px;
+  margin: 2px 0 0 2px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  box-shadow: -2px -2px 0 -1px #fafafb, -2px -2px 0 0 currentColor;
+  content: "";
+}
+
+.citation-copy:hover {
+  background: #f0f0f3;
+  border-color: #cfcfd6;
+}
+
+.citation-copy:active { background: #e8e8ed; }
+
+.citation-code {
+  margin: 0;
+  padding: 24px clamp(18px, 3vw, 28px);
+  background: #fafafb;
+  border: 1px solid #e5e5eb;
+  border-radius: 8px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.citation-code code { font: inherit; }
+
+.citation-code:focus-visible,
+.citation-copy:focus-visible {
+  outline: 3px solid rgba(112, 72, 242, 0.3);
+  outline-offset: 3px;
+}
+
 .site-footer {
   padding: 48px 24px 96px;
   color: #4a4a4a;
@@ -813,7 +883,8 @@ video:-webkit-full-screen {
 @media (max-width: 820px) {
   .title-line { display: inline; }
 
-  .figure-carousel { width: 100%; }
+  .figure-carousel,
+  .citation-box { width: 100%; }
 
   .task-legend { gap: 8px 14px; }
 
